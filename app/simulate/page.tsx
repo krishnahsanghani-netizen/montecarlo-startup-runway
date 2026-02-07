@@ -32,6 +32,18 @@ interface SimulationRecord {
   error?: string;
 }
 
+interface StartSimulationResponse {
+  runId: string;
+  status: "queued" | "running" | "completed" | "failed";
+  cached?: boolean;
+  output?: {
+    runId: string;
+    createdAt: string;
+    results: ScenarioResult[];
+  };
+  error?: string;
+}
+
 function asPercent(value: number): string {
   return `${(value * 100).toFixed(1)}%`;
 }
@@ -187,7 +199,7 @@ export default function SimulatePage() {
       body: JSON.stringify(payload)
     });
 
-    const startJson = await startRes.json();
+    const startJson = (await startRes.json()) as StartSimulationResponse;
     if (!startRes.ok) {
       setStatus("failed");
       setError(startJson.error ?? "Failed to start simulation");
@@ -196,6 +208,15 @@ export default function SimulatePage() {
 
     setRunId(startJson.runId);
     setStatus("running");
+
+    if (startJson.status === "completed" && startJson.output) {
+      setProgressPct(100);
+      setEtaSeconds(0);
+      setResults(startJson.output.results);
+      setStatus("completed");
+      return;
+    }
+
     optimisticTimer = setInterval(() => {
       const elapsed = Date.now() - startedAt;
       const optimistic = Math.min(95, Math.round((elapsed / expectedMs) * 100));

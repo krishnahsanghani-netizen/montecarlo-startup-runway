@@ -35,19 +35,20 @@ export async function POST(request: Request) {
     const cacheKey = JSON.stringify(parsed);
     const cached = resultCache.get(cacheKey);
     if (cached && Date.now() - cached.cachedAt < 5 * 60 * 1000) {
+      const cachedOutput = {
+        ...cached.output,
+        runId,
+        createdAt
+      };
       await repository.saveSimulation({
         id: runId,
         status: "completed",
         progress: 100,
-        output: {
-          ...cached.output,
-          runId,
-          createdAt
-        },
+        output: cachedOutput,
         createdAt,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString()
       });
-      return NextResponse.json({ runId, status: "completed", cached: true });
+      return NextResponse.json({ runId, status: "completed", cached: true, output: cachedOutput });
     }
 
     const key = sessionKey(request);
@@ -90,7 +91,7 @@ export async function POST(request: Request) {
     });
 
     resultCache.set(cacheKey, { cachedAt: Date.now(), output });
-    return NextResponse.json({ runId, status: "completed" });
+    return NextResponse.json({ runId, status: "completed", output });
   } catch (error) {
     await repository.saveSimulation({
       id: runId,
