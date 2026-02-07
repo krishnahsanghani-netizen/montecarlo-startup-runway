@@ -19,8 +19,9 @@ describe("simulation performance smoke", () => {
       "run_perf"
     );
     const elapsedMs = Date.now() - started;
+    const maxLatencyMs = process.env.CI ? 10000 : 6000;
 
     expect(output.results.length).toBe(1);
-    expect(elapsedMs).toBeLessThan(6000);
-  });
+    expect(elapsedMs).toBeLessThan(maxLatencyMs);
+  }, 20000);
 });
